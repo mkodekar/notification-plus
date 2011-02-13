@@ -36,7 +36,6 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.content.BroadcastReceiver;
 import android.os.Vibrator;
-import android.os.SystemClock;
 
 /**
  * NotificationPlusService:
@@ -154,10 +153,13 @@ public class NotificationPlusService extends Service {
 
 		mNotificationStatus = true;
 
+		if (alarmIntent != null)
+			return;
+
 		alarmIntent = PendingIntent.getBroadcast(baseContext, 0, notifyIntent, 0);
 		//Log.d(TAG, "starting notification in " + mTimerInterval + " miliseconds");
 		AlarmManager AM = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
-		AM.setRepeating(AlarmManager.RTC_WAKEUP, SystemClock.uptimeMillis() + mTimerInterval,
+		AM.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + mTimerInterval,
 						mTimerInterval, alarmIntent);
 	}
 	private void stopNotification() {
@@ -246,8 +248,8 @@ public class NotificationPlusService extends Service {
 		long when = System.currentTimeMillis();
 		Context context = getApplicationContext();
         // Create an intent triggered by clicking on the "Clear All Notifications" button
-        Intent deleteIntent = new Intent();
-        deleteIntent.setAction(DELETE_ACTION);
+        //Intent deleteIntent = new Intent();
+        //deleteIntent.setAction(DELETE_ACTION);
 
 		mNotification = new Notification(icon, tickerText, when);
 		CharSequence contentTitle = "Notification+";
@@ -255,7 +257,7 @@ public class NotificationPlusService extends Service {
 		Intent notificationIntent = new Intent(this, NotificationPlusPreferences.class);
 		PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 		mNotification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
-		mNotification.deleteIntent = PendingIntent.getBroadcast(context, 0, deleteIntent, 0);
+		//mNotification.deleteIntent = PendingIntent.getBroadcast(context, 0, deleteIntent, 0);
 		startForeground(mNotificationId, mNotification);
 	}
 
