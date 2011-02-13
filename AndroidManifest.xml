@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="org.jmoyer.NotificationPlus"
+      android:versionCode="1"
+      android:versionName="1.0">
+    <application android:icon="@drawable/icon" android:label="@string/app_name"
+    			 android:debuggable="false">
+
+        <activity android:name=".NotificationPlusPreferences"
+                  android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <receiver android:name="GmailReceiver">
+        	<intent-filter>
+        		<action android:name="android.intent.action.PROVIDER_CHANGED"
+        				android:priority="-10" />
+        		<data android:scheme="content" android:host="gmail-ls"
+        			  android:pathPattern="/unread/.*" />
+        	</intent-filter>
+        	<intent-filter>
+        		<action android:name="android.intent.action.PROVIDER_CHANGED"
+        				android:priority="-10" />
+        		<data android:mimeType="*/*" android:scheme="content"
+        			  android:host="gmail-ls" android:path="/unread/^i" />
+        	</intent-filter>
+        </receiver>
+
+		<receiver android:name=".BootServiceStarter">
+			<intent-filter>
+				<action android:name="android.intent.action.BOOT_COMPLETED" />
+			</intent-filter>
+		</receiver>
+
+		<service android:name=".NotificationPlusService"
+			android:label="@string/service_name"
+			android:icon="@drawable/icon" />
+
+    </application>
+
+    <uses-sdk android:minSdkVersion="7" />
+
+	<!--  permissions -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+	<!--  vibrator -->
+	<uses-permission android:name="android.permission.VIBRATE" android:required="true" />
+	<uses-permission android:name="android.permission.READ_PHONE_STATE" android:required="true" />
+ 	<!-- required to start at boot time -->
+ 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+	<!--    NOT YET IMPLEMENTED: -->
+    <!-- led flashlight for Motodroid -->
+	<!--
+    <uses-permission android:name="android.permission.FLASHLIGHT" android:required="false"/>
+    <uses-permission android:name="android.permission.HARDWARE_TEST" android:required="false"/>
+    -->
+    <!-- led flashlight for froyo -->
+    <!--
+    <uses-permission android:name="android.permission.CAMERA" android:required="false" />
+    -->
+	<!--  get access to AccountManager -->
+	<!--
+	<uses-permission android:name="android.permission.GET_ACCOUNTS" />
+	<uses-permission android:name="android.permission.USE_CREDENTIALS" />
+	<uses-permission android:name="android.permission.MANAGE_ACCOUNTS" />
+	<uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS" />
+	-->
+	<!--  required for google voice updates -->
+	<!--
+	<uses-permission android:name="android.permission.INTERNET" />
+ 	-->
+</manifest> 

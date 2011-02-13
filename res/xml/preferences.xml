@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:title="@string/app_name">
+  	<CheckBoxPreference android:key="@string/service_enabled_key"
+  						android:title="@string/service_enabled"
+  						android:defaultValue="true"
+  						android:summaryOn="@string/service_enabled_on"
+  						android:summaryOff="@string/service_enabled_off"/>
+    <PreferenceCategory android:title="@string/NotificationType">
+	<!--
+  	<CheckBoxPreference android:key="@string/use_flash_key"
+  			android:title="@string/camera_flash"
+			android:defaultValue="false"
+			android:summaryOn="@string/camera_flash_on"
+			android:summaryOff="@string/camera_flash_off"/>
+			 -->
+	<CheckBoxPreference android:key="@string/use_vibrator_key"
+			android:title="@string/vibrator_notification"
+			android:defaultValue="false"
+			android:summaryOn="@string/vibrator_notification_on"
+			android:summaryOff="@string/vibrator_notification_off"/>
+    <CheckBoxPreference android:key="@string/use_system_notification_key"
+			android:title="@string/system_notification"
+			android:defaultValue="true"
+			android:summaryOn="@string/system_notification_on"
+			android:summaryOff="@string/system_notification_off"/>
+	</PreferenceCategory>
+	<ListPreference android:key="@string/notification_frequency_key"
+			android:title="@string/notification_frequency"
+			android:entries="@array/notificationFrequencies"
+			android:entryValues="@array/notificationFrequenciesValues"
+			android:defaultValue="60"/>
+</PreferenceScreen>

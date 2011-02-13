@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="PREFS_FILE">org.jmoyer.NotificationPlus_preferences</string>
+    <string name="NotificationType">Notification Type:</string>
+    <string name="app_name">Notification Plus</string>
+    <string name="service_name">Notification Plus Service</string>
+
+	<string name="service_enabled">Enable Service</string>
+	<string name="service_enabled_on">service running</string>
+	<string name="service_enabled_off">service stopped</string>
+	
+    <string name="camera_flash">Camera Flash</string>
+    <string name="camera_flash_on">The camera\'s flashlight will be used for notifications.</string>
+    <string name="camera_flash_off">The camera\'s flashlight will not be used for notifications.</string>
+
+    <string name="system_notification">Notification Ringtone</string>
+    <string name="system_notification_on">The system notification ringtone will be used.</string>
+	<string name="system_notification_off">The system notification ringtone will not be used.</string>
+
+	<string name="vibrator_notification">Vibrator</string>
+	<string name="vibrator_notification_on">The phone\'s vibrator will be used for notifications.</string>
+	<string name="vibrator_notification_off">The phone\'s vibrator will not be used for notifications.</string>
+
+	<string name="notification_frequency">Notification Frequency</string>
+	<string name="frequency_15s">15 seconds</string>
+	<string name="frequency_15s_value">15</string>
+	<string name="frequency_30s">30 seconds</string>
+	<string name="frequency_30s_value">30</string>
+	<string name="frequency_1m">1 minute</string>
+	<string name="frequency_1m_value">60</string>
+	<string name="frequency_5m">5 minutes</string>
+	<string name="frequency_5m_value">300</string>
+
+	<string-array name="notificationFrequencies">
+		<item>@string/frequency_15s</item>
+		<item>@string/frequency_30s</item>
+		<item>@string/frequency_1m</item>
+		<item>@string/frequency_5m</item>
+	</string-array>
+
+	<!--  not user-visible -->
+	<string-array name="notificationFrequenciesValues">
+		<item>@string/frequency_15s_value</item>
+		<item>@string/frequency_30s_value</item>
+		<item>@string/frequency_1m_value</item>
+		<item>@string/frequency_5m_value</item>
+	</string-array>
+
+    <!-- preference keys -->
+    <string name="service_enabled_key">notificationServiceEnabled</string>
+    <string name="use_flash_key">useFlash</string>
+	<string name="use_system_notification_key">useSystemNotification</string>
+	<string name="use_vibrator_key">useVibrator</string>
+	<string name="notification_frequency_key">notificationFrequency</string>
+</resources>
