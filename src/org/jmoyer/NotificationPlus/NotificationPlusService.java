@@ -208,6 +208,10 @@ public class NotificationPlusService extends Service {
         }
         if (mUpdateMechanisms == 0)
         	Log.d(TAG, "no notification mechanisms selected!");
+        if (!prefs.getBoolean(getString(R.string.service_enabled_key), false)) {
+        	stopForeground(true);
+        	stopSelf();
+        }
 	}
 
 	private void watchPreferences() {
