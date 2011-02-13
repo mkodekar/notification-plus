@@ -18,6 +18,7 @@ package org.jmoyer.NotificationPlus;
     You should have received a copy of the GNU General Public License
     along with Notification Plus.  If not, see <http://www.gnu.org/licenses/>.
  */
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -35,6 +36,7 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.content.BroadcastReceiver;
 import android.os.Vibrator;
+import android.os.SystemClock;
 
 /**
  * NotificationPlusService:
@@ -105,9 +107,11 @@ public class NotificationPlusService extends Service {
 	private final String TAG = "NotificationPlusService";
 
 	private static final String DELETE_ACTION = "delete";
+	private static final String ALARM_ACTION = "alarm";
 	private BroadcastReceiver unblankReceiver, smsReceiver, callStateReceiver, updateReceiver;
 	private IntentFilter smsFilter, unblankFilter, callFilter, updateFilter;
 	private Handler timerHandler;
+	private PendingIntent alarmIntent = null;
 	/* state information */
 	private boolean mNotificationStatus;
 	private boolean mScreenOn;
@@ -140,20 +144,32 @@ public class NotificationPlusService extends Service {
 				   //   see android.media.RingtoneManager
 				   mRingtone.play();
 			   }
-			   Log.d(TAG, "next notification in " + mTimerInterval + " msecs");
-			   timerHandler.postDelayed(mDoNotify, mTimerInterval);
 		   }
 	};
 
 	private void startNotification() {
+		Context baseContext = getBaseContext();
+		Intent notifyIntent = new Intent();
+		notifyIntent.setAction(ALARM_ACTION);
+
 		mNotificationStatus = true;
-		Log.d(TAG, "starting notification in " + mTimerInterval + " miliseconds");
-		timerHandler.postDelayed(mDoNotify, mTimerInterval);
+
+		alarmIntent = PendingIntent.getBroadcast(baseContext, 0, notifyIntent, 0);
+		//Log.d(TAG, "starting notification in " + mTimerInterval + " miliseconds");
+		AlarmManager AM = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+		AM.setRepeating(AlarmManager.RTC_WAKEUP, SystemClock.uptimeMillis() + mTimerInterval,
+						mTimerInterval, alarmIntent);
 	}
 	private void stopNotification() {
 		mNotificationStatus = false;
 		timerHandler.removeCallbacks(mDoNotify);
+		AlarmManager AM = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+		if (alarmIntent != null) {
+			AM.cancel(alarmIntent);
+			alarmIntent = null;
+		}
 	}
+
 	void updateNotificationState(boolean set, boolean ignoreScreenState) {
 		if (set && mNotificationStatus != true) {
         	TelephonyManager tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
@@ -161,8 +177,7 @@ public class NotificationPlusService extends Service {
         		if (ignoreScreenState || !mScreenOn) {
         			startNotification();
         		}
-        	} else
-        		Log.d("NotificationPlusService", "not starting notification " + mScreenOn + " " + tm.getCallState());
+        	}
 		} else if (!set && mNotificationStatus == true) {
 			stopNotification();
 		}
@@ -232,7 +247,6 @@ public class NotificationPlusService extends Service {
 		Context context = getApplicationContext();
         // Create an intent triggered by clicking on the "Clear All Notifications" button
         Intent deleteIntent = new Intent();
-        deleteIntent.setClass(getBaseContext(), NotificationPlusService.class);
         deleteIntent.setAction(DELETE_ACTION);
 
 		mNotification = new Notification(icon, tickerText, when);
@@ -240,7 +254,6 @@ public class NotificationPlusService extends Service {
 		CharSequence contentText = "Select to configure notifications.";
 		Intent notificationIntent = new Intent(this, NotificationPlusPreferences.class);
 		PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-		//PendingIntent mDeleteIntent = PendingIntent.
 		mNotification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
 		mNotification.deleteIntent = PendingIntent.getBroadcast(context, 0, deleteIntent, 0);
 		startForeground(mNotificationId, mNotification);
@@ -275,19 +288,9 @@ public class NotificationPlusService extends Service {
 		}
 	}
 
-	private void logPreferences() {
-		SharedPreferences prefs = getSharedPreferences(getString(R.string.PREFS_FILE), MODE_PRIVATE);
-		Log.d(TAG, "enabled: " + prefs.getBoolean(getString(R.string.service_enabled_key), false));
-		Log.d(TAG, "use flash: " + prefs.getBoolean(getString(R.string.use_flash_key), false));
-		Log.d(TAG, "use vibrator: " + prefs.getBoolean(getString(R.string.use_vibrator_key), false));
-		Log.d(TAG, "use sound: " + prefs.getBoolean(getString(R.string.use_system_notification_key), false));
-		Log.d(TAG, "timer interval: " + prefs.getString(getString(R.string.notification_frequency_key), "none"));
-	}
-
 	public void onStart(Intent intent, int startId) {
 		super.onStart(intent, startId);
 
-		logPreferences();
 		SharedPreferences prefs = getSharedPreferences(getString(R.string.PREFS_FILE), MODE_PRIVATE);
 
 		watchPreferences();
@@ -341,13 +344,14 @@ public class NotificationPlusService extends Service {
 			public void onReceive(Context context, Intent intent) {
 				boolean enable;
 				if (DELETE_ACTION.equals(intent.getAction())) {
-					Log.d(TAG, "got delete intent!");
 					updateNotificationState(false);
 					return;
+				} else if (ALARM_ACTION.equals(intent.getAction())) {
+					timerHandler.post(mDoNotify);
+					return;
 				}
-				Log.d(TAG, "got " + intent.getAction() + " intent");
+				/* OK, update from the static method */
 				enable = intent.getBooleanExtra("org.jmoyer.NotificationPlus.enable", false);
-				Log.d("NotificationPlusService", "update: " + enable);
 				updateNotificationState(enable);
 			}
 		};
@@ -362,6 +366,7 @@ public class NotificationPlusService extends Service {
 		registerReceiver(callStateReceiver, callFilter);
 		updateFilter = new IntentFilter("org.jmoyer.NotificationPlus.UPDATE");
 		updateFilter.addAction(DELETE_ACTION);
+		updateFilter.addAction(ALARM_ACTION);
 		registerReceiver(updateReceiver, updateFilter);
 
 		/* Finally, start the service in the foreground */
