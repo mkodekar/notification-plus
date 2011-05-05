@@ -51,7 +51,24 @@ import android.os.Vibrator;
  * TODO: fix clear all delete intent so it works
  * TODO: allow more flexible setting of the intervals
  * TODO: google voice support
- * 
+ *
+ * Note: Some SMS applications will unblank the screen when a new message arrives.  Since
+ *       Notification Plus bases its decision on whether or not to send notification on the
+ *       screen state, we have to figure out a better way to determine whether or not someone
+ *       is actively looking at the phone.
+ *       Since we basically have the same problem with incoming calls (the screen is unblanked),
+ *       we can try to solve the problem the same in both cases.  It could look something like
+ *       this:
+ *       1) notification arrives.
+ *		 2) schedule an alarm for 10 seconds later to see if the screen is still on.
+ *		 3) schedule the recurring notification for some time after 10 seconds.
+ *		 If the screen is still on after the ten seconds, then there is likely a user looking
+ *       at the device, so cancel the recurring notification.
+ *
+ *       Another way to deal with this would be to "listen" for keypress events.  I'm not sure
+ *       if this is possible, since they are likely going to other applications.
+ */
+/*
  * GoogleVoice has a way to get a formatted xml or json response for unread messages, using this URL:
  * https://www.google.com/voice/inbox/recent/unread/
  * empty looks like:
@@ -105,12 +122,15 @@ public class NotificationPlusService extends Service {
 	/* Logging Tag */
 	private final String TAG = "NotificationPlusService";
 
+	private final int USER_PRESENT_TIMEOUT = 10000; // 10 seconds
+	private static final String USER_PRESENT_ACTION = "userpresent";
 	private static final String DELETE_ACTION = "delete";
 	private static final String ALARM_ACTION = "alarm";
 	private BroadcastReceiver unblankReceiver, smsReceiver, callStateReceiver, updateReceiver;
 	private IntentFilter smsFilter, unblankFilter, callFilter, updateFilter;
 	private Handler timerHandler;
 	private PendingIntent alarmIntent = null;
+	private PendingIntent userPresentIntent = null;
 	/* state information */
 	private boolean mNotificationStatus;
 	private boolean mScreenOn;
@@ -150,18 +170,29 @@ public class NotificationPlusService extends Service {
 		Context baseContext = getBaseContext();
 		Intent notifyIntent = new Intent();
 		notifyIntent.setAction(ALARM_ACTION);
+		Intent userIntent = new Intent();
+		userIntent.setAction(USER_PRESENT_ACTION);
 
 		mNotificationStatus = true;
 
 		if (alarmIntent != null)
 			return;
 
+		/*
+		 * If the screen is on, schedule two intents.  The first will check
+		 * to see if there was a user present (did the screen remain unblanked).
+		 * If so, it will cancel the second alarm, which would trigger the notification.
+		 */
 		alarmIntent = PendingIntent.getBroadcast(baseContext, 0, notifyIntent, 0);
+		userPresentIntent = PendingIntent.getBroadcast(baseContext, 0, userIntent, 0);
+
 		//Log.d(TAG, "starting notification in " + mTimerInterval + " miliseconds");
 		AlarmManager AM = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+		AM.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + USER_PRESENT_TIMEOUT, userPresentIntent);
 		AM.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + mTimerInterval,
 						mTimerInterval, alarmIntent);
 	}
+
 	private void stopNotification() {
 		mNotificationStatus = false;
 		timerHandler.removeCallbacks(mDoNotify);
@@ -170,22 +201,21 @@ public class NotificationPlusService extends Service {
 			AM.cancel(alarmIntent);
 			alarmIntent = null;
 		}
+		if (userPresentIntent != null) {
+			AM.cancel(userPresentIntent);
+			userPresentIntent = null;
+		}
 	}
 
-	void updateNotificationState(boolean set, boolean ignoreScreenState) {
+	void updateNotificationState(boolean set) {
 		if (set && mNotificationStatus != true) {
         	TelephonyManager tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
         	if (tm.getCallState() != TelephonyManager.CALL_STATE_OFFHOOK) {
-        		if (ignoreScreenState || !mScreenOn) {
-        			startNotification();
-        		}
+        		startNotification();
         	}
 		} else if (!set && mNotificationStatus == true) {
 			stopNotification();
 		}
-	}
-	void updateNotificationState(boolean set) {
-		updateNotificationState(set, false);
 	}
 	
 	public static void sUpdateNotificationState(Context context, boolean set) {
@@ -309,7 +339,12 @@ public class NotificationPlusService extends Service {
 						return;
 				}
 				mScreenOn = true;
-				updateNotificationState(false);
+				/*
+				 * Don't disable notifications if we're within the grace
+				 * period for user activity.
+				 */
+				if (userPresentIntent == null)
+					updateNotificationState(false);
 			}
 		};
 
@@ -334,7 +369,7 @@ public class NotificationPlusService extends Service {
 					}
 					/* OK, it went from ringing to something other than offhook: missed call. */
 					previousCallState = currentState;
-					updateNotificationState(true, true);
+					updateNotificationState(true);
 				} else {
 					previousCallState = currentState;
 				}
@@ -351,6 +386,16 @@ public class NotificationPlusService extends Service {
 				} else if (ALARM_ACTION.equals(intent.getAction())) {
 					timerHandler.post(mDoNotify);
 					return;
+				} else if (USER_PRESENT_ACTION.equals(intent.getAction())) {
+					userPresentIntent = null;
+					/*
+					 * If the screen is still on 10 seconds later, then there
+					 * is a user present, so cancel the recurring notification.
+					 */
+					//Log.d(TAG, "user present timer fired, screen state = " + mScreenOn);
+					if (mScreenOn == false)
+						return;
+					updateNotificationState(false);
 				}
 				/* OK, update from the static method */
 				enable = intent.getBooleanExtra("org.jmoyer.NotificationPlus.enable", false);
@@ -369,6 +414,7 @@ public class NotificationPlusService extends Service {
 		updateFilter = new IntentFilter("org.jmoyer.NotificationPlus.UPDATE");
 		updateFilter.addAction(DELETE_ACTION);
 		updateFilter.addAction(ALARM_ACTION);
+		updateFilter.addAction(USER_PRESENT_ACTION);
 		registerReceiver(updateReceiver, updateFilter);
 
 		/* Finally, start the service in the foreground */
