@@ -79,8 +79,10 @@ public class GmailReceiver extends BroadcastReceiver {
 
 		SharedPreferences prefs = context.getSharedPreferences(context.getString(R.string.PREFS_FILE), Context.MODE_PRIVATE);
 		if (!prefs.getBoolean(context.getString(R.string.service_enabled_key), true))
-					return;
-
+				return;
+		if (!prefs.getBoolean(context.getString(R.string.gmail_enabled_key), true))
+				return;
+		
 		if (Intent.ACTION_PROVIDER_CHANGED.equals(action)) {
 			int unreadCount = intent.getIntExtra("count", 0);
 			if (unreadCount > 0) {

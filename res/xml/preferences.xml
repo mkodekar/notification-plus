@@ -31,4 +31,16 @@
 			android:entries="@array/notificationFrequencies"
 			android:entryValues="@array/notificationFrequenciesValues"
 			android:defaultValue="60"/>
+	<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+		android:title="@string/notification_sources">
+		<CheckBoxPreference android:key="@string/sms_enabled_key" 
+							android:title="@string/ns_sms"
+							android:defaultValue="true"/>
+		<CheckBoxPreference android:key="@string/missedcall_enabled_key" 
+							android:title="@string/ns_missedcall"
+							android:defaultValue="true"/>
+		<CheckBoxPreference android:key="@string/gmail_enabled_key" 
+							android:title="@string/ns_gmail"
+							android:defaultValue="true"/>
+	</PreferenceScreen>
 </PreferenceScreen>

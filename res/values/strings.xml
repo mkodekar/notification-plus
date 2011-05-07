@@ -21,6 +21,16 @@
 	<string name="vibrator_notification_on">The phone\'s vibrator will be used for notifications.</string>
 	<string name="vibrator_notification_off">The phone\'s vibrator will not be used for notifications.</string>
 
+	<string name="notification_sources">Notification Sources</string>
+	<string name="ns_gmail">GMail</string>
+	<string name="ns_sms">SMS</string>
+	<string name="ns_missedcall">Missed Call</string>
+	<string-array name="notificationSources">
+		<item>@string/ns_sms</item>
+		<item>@string/ns_missedcall</item>
+		<item>@string/ns_gmail</item>
+	</string-array>
+
 	<string name="notification_frequency">Notification Frequency</string>
 	<string name="frequency_15s">15 seconds</string>
 	<string name="frequency_15s_value">15</string>
@@ -52,4 +62,8 @@
 	<string name="use_system_notification_key">useSystemNotification</string>
 	<string name="use_vibrator_key">useVibrator</string>
 	<string name="notification_frequency_key">notificationFrequency</string>
+
+	<string name="gmail_enabled_key">gmailEnabled</string>
+	<string name="sms_enabled_key">smsEnabled</string>
+	<string name="missedcall_enabled_key">true</string>
 </resources>

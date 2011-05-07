@@ -351,6 +351,10 @@ public class NotificationPlusService extends Service {
 		smsReceiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
+				SharedPreferences prefs = context.getSharedPreferences(context.getString(R.string.PREFS_FILE), Context.MODE_PRIVATE);
+				if (!prefs.getBoolean(context.getString(R.string.sms_enabled_key), true))
+							return;
+
 				updateNotificationState(true);
 			}
 		};
@@ -369,6 +373,10 @@ public class NotificationPlusService extends Service {
 					}
 					/* OK, it went from ringing to something other than offhook: missed call. */
 					previousCallState = currentState;
+					SharedPreferences prefs = context.getSharedPreferences(context.getString(R.string.PREFS_FILE), Context.MODE_PRIVATE);
+					if (!prefs.getBoolean(context.getString(R.string.missedcall_enabled_key), true))
+								return;
+
 					updateNotificationState(true);
 				} else {
 					previousCallState = currentState;
