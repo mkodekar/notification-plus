@@ -158,10 +158,16 @@ public class NotificationPlusService extends Service {
 				   mVib.vibrate(pattern, -1);
 			   }
 			   if ((mUpdateMechanisms & UPDATE_SOUND) != 0) {
-				   // check to see if the phone is in silent mode
-				   // play the default notification DEFAULT_NOTIFICATION_URI
-				   //   see android.media.RingtoneManager
-				   mRingtone.play();
+				   /*
+				    * TODO: Check for silent mode and don't ring in that case.
+				    */
+				   /*
+				    * There have been 2 null pointer exceptions trying to play
+				    * the default ringtone.  If the default notification ringtone
+				    * is "silent", then mRingtone will be null, so check for that.
+				    */
+				   if (mRingtone != null)
+					   mRingtone.play();
 			   }
 		   }
 	};
