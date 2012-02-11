@@ -19,7 +19,6 @@ package org.jmoyer.NotificationPlus;
     along with Notification Plus.  If not, see <http://www.gnu.org/licenses/>.
  */
 import android.app.AlarmManager;
-import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
@@ -122,10 +121,8 @@ public class NotificationPlusService extends Service {
 	/* Logging Tag */
 	private final String TAG = "NotificationPlusService";
 
-	private final int USER_PRESENT_TIMEOUT = 10000; // 10 seconds
-	private static final String USER_PRESENT_ACTION = "userpresent";
-	private static final String DELETE_ACTION = "delete";
-	private static final String ALARM_ACTION = "alarm";
+	private static final String DELETE_ACTION = "org.jmoyer.NotificationPlus.delete";
+	private static final String ALARM_ACTION = "org.jmoyer.NotificationPlus.alarm";
 	private BroadcastReceiver unblankReceiver, smsReceiver, callStateReceiver, updateReceiver;
 	private IntentFilter smsFilter, unblankFilter, callFilter, updateFilter;
 	private Handler timerHandler;
@@ -134,10 +131,8 @@ public class NotificationPlusService extends Service {
 	/* state information */
 	private boolean mNotificationStatus;
 	private boolean mScreenOn;
+	private boolean mUserPresent = false;
 	private String previousCallState;
-	/* service info */
-	private final int mNotificationId = 1;
-	private Notification mNotification = null;
 	/* Preferences */
 	private SharedPreferences.OnSharedPreferenceChangeListener prefsListener = null;
 	private long mTimerInterval;
@@ -176,27 +171,21 @@ public class NotificationPlusService extends Service {
 		Context baseContext = getBaseContext();
 		Intent notifyIntent = new Intent();
 		notifyIntent.setAction(ALARM_ACTION);
-		Intent userIntent = new Intent();
-		userIntent.setAction(USER_PRESENT_ACTION);
-
-		mNotificationStatus = true;
 
 		if (alarmIntent != null)
 			return;
 
-		/*
-		 * If the screen is on, schedule two intents.  The first will check
-		 * to see if there was a user present (did the screen remain unblanked).
-		 * If so, it will cancel the second alarm, which would trigger the notification.
-		 */
-		alarmIntent = PendingIntent.getBroadcast(baseContext, 0, notifyIntent, 0);
-		userPresentIntent = PendingIntent.getBroadcast(baseContext, 0, userIntent, 0);
+		if (!mUserPresent) {
+			mNotificationStatus = true;
+			AlarmManager AM = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+			alarmIntent = PendingIntent.getBroadcast(baseContext, 0, notifyIntent, 0);
 
-		//Log.d(TAG, "starting notification in " + mTimerInterval + " miliseconds");
-		AlarmManager AM = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
-		AM.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + USER_PRESENT_TIMEOUT, userPresentIntent);
-		AM.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + mTimerInterval,
-						mTimerInterval, alarmIntent);
+			//Log.d(TAG, "starting notification in " + mTimerInterval + " milliseconds");
+			AM.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + mTimerInterval,
+							mTimerInterval, alarmIntent);
+		} else {
+			Log.d(TAG, "Not starting notification since user is present");
+		}
 	}
 
 	private void stopNotification() {
@@ -217,9 +206,11 @@ public class NotificationPlusService extends Service {
 		if (set && mNotificationStatus != true) {
         	TelephonyManager tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
         	if (tm.getCallState() != TelephonyManager.CALL_STATE_OFFHOOK) {
+        		Log.d(TAG, "starting notification");
         		startNotification();
         	}
 		} else if (!set && mNotificationStatus == true) {
+			Log.d(TAG, "stopping notification");
 			stopNotification();
 		}
 	}
@@ -248,6 +239,9 @@ public class NotificationPlusService extends Service {
         		mTimerInterval = 60000;
         mUpdateMechanisms = 0;
         if (prefs.getBoolean(getString(R.string.use_system_notification_key), false)) {
+        	/*
+        	 * TODO: register for changes to the default ringtone uri.
+        	 */
         	mUpdateMechanisms |= UPDATE_SOUND;
         	Uri ringtoneUri = RingtoneManager.getActualDefaultRingtoneUri(context,
         																  RingtoneManager.TYPE_NOTIFICATION);
@@ -262,7 +256,6 @@ public class NotificationPlusService extends Service {
         if (mUpdateMechanisms == 0)
         	Log.d(TAG, "no notification mechanisms selected!");
         if (!prefs.getBoolean(getString(R.string.service_enabled_key), false)) {
-        	stopForeground(true);
         	stopSelf();
         }
 	}
@@ -276,25 +269,6 @@ public class NotificationPlusService extends Service {
 		        }
 		};
 		prefs.registerOnSharedPreferenceChangeListener(prefsListener);
-	}
-
-	private void doStartForeground() {
-		int icon = R.drawable.notification;
-		CharSequence tickerText = "Notification+ Started";
-		long when = System.currentTimeMillis();
-		Context context = getApplicationContext();
-        // Create an intent triggered by clicking on the "Clear All Notifications" button
-        //Intent deleteIntent = new Intent();
-        //deleteIntent.setAction(DELETE_ACTION);
-
-		mNotification = new Notification(icon, tickerText, when);
-		CharSequence contentTitle = "Notification+";
-		CharSequence contentText = "Select to configure notifications.";
-		Intent notificationIntent = new Intent(this, NotificationPlusPreferences.class);
-		PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-		mNotification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
-		//mNotification.deleteIntent = PendingIntent.getBroadcast(context, 0, deleteIntent, 0);
-		startForeground(mNotificationId, mNotification);
 	}
 
 	private void setupInitialState() {
@@ -341,16 +315,20 @@ public class NotificationPlusService extends Service {
 			@Override
 			public void onReceive(Context context, Intent intent) {
 				if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)){
-						mScreenOn = false;
+						Log.d(TAG, "blank");
+						mScreenOn = mUserPresent = false;
 						return;
 				}
+				Log.d(TAG, "unblank");
 				mScreenOn = true;
-				/*
-				 * Don't disable notifications if we're within the grace
-				 * period for user activity.
-				 */
-				if (userPresentIntent == null)
-					updateNotificationState(false);
+
+				if (mUserPresent) {
+					Log.w(TAG, "unblank intent, but user present?");
+					return;
+				}
+
+				Log.d(TAG, "not turning off notification");
+				//updateNotificationState(false);
 			}
 		};
 
@@ -361,6 +339,7 @@ public class NotificationPlusService extends Service {
 				if (!prefs.getBoolean(context.getString(R.string.sms_enabled_key), true))
 							return;
 
+				Log.d(TAG, "got sms notification");
 				updateNotificationState(true);
 			}
 		};
@@ -383,6 +362,7 @@ public class NotificationPlusService extends Service {
 					if (!prefs.getBoolean(context.getString(R.string.missedcall_enabled_key), true))
 								return;
 
+					Log.d(TAG, "missed call, starting notification");
 					updateNotificationState(true);
 				} else {
 					previousCallState = currentState;
@@ -400,20 +380,20 @@ public class NotificationPlusService extends Service {
 				} else if (ALARM_ACTION.equals(intent.getAction())) {
 					timerHandler.post(mDoNotify);
 					return;
-				} else if (USER_PRESENT_ACTION.equals(intent.getAction())) {
-					userPresentIntent = null;
-					/*
-					 * If the screen is still on 10 seconds later, then there
-					 * is a user present, so cancel the recurring notification.
-					 */
-					//Log.d(TAG, "user present timer fired, screen state = " + mScreenOn);
+				} else if (Intent.ACTION_USER_PRESENT.equals(intent.getAction())) {
+					Log.d(TAG, "ACTION_USER_PRESENT");
+					mUserPresent = true;
 					if (mScreenOn == false)
-						return;
+						Log.w(TAG, "user present action, but screen off?");
+
+					Log.d(TAG, "got user present action, screen on, canceling notification");
 					updateNotificationState(false);
+				} else {
+					/* OK, update from the static method */
+					enable = intent.getBooleanExtra("org.jmoyer.NotificationPlus.enable", false);
+					Log.d(TAG, "gmail notification, starting alarm");
+					updateNotificationState(enable);
 				}
-				/* OK, update from the static method */
-				enable = intent.getBooleanExtra("org.jmoyer.NotificationPlus.enable", false);
-				updateNotificationState(enable);
 			}
 		};
 
@@ -428,11 +408,8 @@ public class NotificationPlusService extends Service {
 		updateFilter = new IntentFilter("org.jmoyer.NotificationPlus.UPDATE");
 		updateFilter.addAction(DELETE_ACTION);
 		updateFilter.addAction(ALARM_ACTION);
-		updateFilter.addAction(USER_PRESENT_ACTION);
+		updateFilter.addAction(Intent.ACTION_USER_PRESENT);
 		registerReceiver(updateReceiver, updateFilter);
-
-		/* Finally, start the service in the foreground */
-		doStartForeground();
 	}
 
 	public void onDestroy() {
