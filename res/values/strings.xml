@@ -56,12 +56,27 @@
 		<item>@string/frequency_5m_value</item>
 	</string-array>
 
+	<!--  Notification Cancellation Methods -->
+	<string name="notification_cancel_event">Stop Notifications When:</string>
+	<string name="cancel_type_unblank">Screen is turned on</string>
+	<string name="cancel_type_unlock">Screen is unlocked</string>
+
+	<string-array name="notificationCancelTypes">
+	    <item>@string/cancel_type_unblank</item>
+	    <item>@string/cancel_type_unlock</item>
+	</string-array>
+	<string-array name="notificationCancelValues">
+		<item>@string/cancel_type_unblank</item>
+		<item>@string/cancel_type_unlock</item>
+	</string-array>
+	
     <!-- preference keys -->
     <string name="service_enabled_key">notificationServiceEnabled</string>
     <string name="use_flash_key">useFlash</string>
 	<string name="use_system_notification_key">useSystemNotification</string>
 	<string name="use_vibrator_key">useVibrator</string>
 	<string name="notification_frequency_key">notificationFrequency</string>
+	<string name="notification_cancel_key">notificationCancel</string>
 
 	<string name="gmail_enabled_key">gmailEnabled</string>
 	<string name="sms_enabled_key">smsEnabled</string>

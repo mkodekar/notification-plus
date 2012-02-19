@@ -30,7 +30,7 @@
 			android:title="@string/notification_frequency"
 			android:entries="@array/notificationFrequencies"
 			android:entryValues="@array/notificationFrequenciesValues"
-			android:defaultValue="60"/>
+			android:defaultValue="@string/frequency_1m_value"/>
 	<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
 		android:title="@string/notification_sources">
 		<CheckBoxPreference android:key="@string/sms_enabled_key" 
@@ -43,4 +43,9 @@
 							android:title="@string/ns_gmail"
 							android:defaultValue="true"/>
 	</PreferenceScreen>
+	<ListPreference android:key="@string/notification_cancel_key"
+			android:title="@string/notification_cancel_event"
+			android:entries="@array/notificationCancelTypes"
+			android:entryValues="@array/notificationCancelValues"
+			android:defaultValue="@string/cancel_type_unblank"/>
 </PreferenceScreen>

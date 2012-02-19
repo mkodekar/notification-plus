@@ -143,6 +143,10 @@ public class NotificationPlusService extends Service {
 	private long UPDATE_FLASH = 0x4;
 	private Ringtone mRingtone = null;
 
+	private static final int CANCEL_TYPE_UNBLANK = 0;
+	private static final int CANCEL_TYPE_UNLOCK = 1;
+	private int mCancellationEvent;
+
 	private Runnable mDoNotify = new Runnable() {
 		   public void run() {
 			   
@@ -253,6 +257,17 @@ public class NotificationPlusService extends Service {
         if (prefs.getBoolean(getString(R.string.use_flash_key), false)) {
         	mUpdateMechanisms |= UPDATE_FLASH;
         }
+
+        String cancelTypeUnblank = getString(R.string.cancel_type_unblank);
+        String cancelTypeUnlock = getString(R.string.cancel_type_unlock);
+        String cancelType = prefs.getString(getString(R.string.notification_cancel_key), cancelTypeUnblank);
+        if (cancelType.equals(cancelTypeUnblank))
+        	mCancellationEvent = CANCEL_TYPE_UNBLANK;
+        else {
+        	assert(cancelType.equals(cancelTypeUnlock));
+        	mCancellationEvent = CANCEL_TYPE_UNLOCK;
+        }
+
         if (mUpdateMechanisms == 0)
         	Log.d(TAG, "no notification mechanisms selected!");
         if (!prefs.getBoolean(getString(R.string.service_enabled_key), false)) {
@@ -327,8 +342,10 @@ public class NotificationPlusService extends Service {
 					return;
 				}
 
-				Log.d(TAG, "not turning off notification");
-				//updateNotificationState(false);
+				if (mCancellationEvent == CANCEL_TYPE_UNBLANK) {
+					Log.d(TAG, "unblank: disabling notification");
+					updateNotificationState(false);
+				}
 			}
 		};
 
@@ -386,8 +403,10 @@ public class NotificationPlusService extends Service {
 					if (mScreenOn == false)
 						Log.w(TAG, "user present action, but screen off?");
 
-					Log.d(TAG, "got user present action, screen on, canceling notification");
-					updateNotificationState(false);
+					if (mCancellationEvent == CANCEL_TYPE_UNLOCK) {
+						Log.d(TAG, "got user present action, screen on, canceling notification");
+						updateNotificationState(false);
+					}
 				} else {
 					/* OK, update from the static method */
 					enable = intent.getBooleanExtra("org.jmoyer.NotificationPlus.enable", false);
